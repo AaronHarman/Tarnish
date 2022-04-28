@@ -4,6 +4,7 @@
 // Purpose:     modification code for Tarnish, an image modification program
 
 use image::{DynamicImage, GenericImage, GenericImageView, Pixel, Rgba};
+use rand::Rng;
 
 pub enum ModResult {
     Ok(DynamicImage),
@@ -67,6 +68,44 @@ pub fn rgb_replace(img : DynamicImage, args : Vec<String>) -> ModResult {
             Err(e) => return ModResult::ArgError(format!("Blue hex color improperly formatted: {}.", e)),
         };
         new_img.put_pixel(pixel.0, pixel.1, Rgba([(rr*nr+gr*ng+br*nb) as u8, (rg*nr+gg*ng+bg*nb) as u8, (rb*nr+gb*ng+bb*nb) as u8, a]));
+    }
+
+    ModResult::Ok(new_img)
+}
+
+pub fn mosaic(img : DynamicImage, args : Vec<String>) -> ModResult {
+    if args.len() != 1 {
+        return ModResult::ArgError("Requires a number of pieces to make the mosaic out of.".to_string())
+    }
+
+    let mut new_img = img.clone();
+    let (w,h) = img.dimensions();
+    let num : u32 = match args[0].parse() {
+        Ok(i) => i,
+        Err(_) => return ModResult::ArgError("Requires a number of pieces to make the mosaic out of.".to_string())
+    };
+    let mut points : Vec<(u32,u32)> = Vec::new();
+
+    // generate all the points to center mosaic pieces on
+    let mut rng = rand::thread_rng(); //cache thread_rng for better performance
+    for _i in 0..num {
+        points.push((rng.gen::<u32>()%w, rng.gen::<u32>()%h));
+    }
+
+    // make the mosaic itself
+    for pixel in img.pixels() {
+        // find the closest point to this pixel
+        let mut closest : (f64, (u8,u8,u8,u8)) = (-1.0, (0,0,0,0));
+        let mut first = true;
+        for point in &points {
+            let distance : f64 = (((pixel.0 as i32 - point.0 as i32).pow(2) + (pixel.1 as i32 - point.1 as i32).pow(2)) as f64).sqrt();
+            if distance < closest.0 || first {
+                first = false;
+                closest = (distance, img.get_pixel(point.0,point.1).to_rgba().channels4());
+            }
+        }
+        // copy that color and make this pixel that color
+        new_img.put_pixel(pixel.0, pixel.1, Rgba([closest.1.0, closest.1.1, closest.1.2, closest.1.3]));
     }
 
     ModResult::Ok(new_img)

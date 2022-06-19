@@ -45,6 +45,7 @@ fn args() {
         "huerotate" => mods::hue_rotate,
         "rgbreplace" => mods::rgb_replace,
         "mosaic" => mods::mosaic,
+        "colorize" => mods::colorize,
         _ => {
             print_error("Invalid Command.");
             exit(1);

@@ -46,6 +46,7 @@ fn args() {
         "rgbreplace" => mods::rgb_replace,
         "mosaic" => mods::mosaic,
         "colorize" => mods::colorize,
+        "pallettize" => mods::pallettize,
         _ => {
             print_error("Invalid Command.");
             exit(1);

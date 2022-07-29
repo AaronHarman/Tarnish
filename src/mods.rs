@@ -4,6 +4,7 @@
 // Purpose:     modification code for Tarnish, an image modification program
 
 use image::{DynamicImage, GenericImage, GenericImageView, Pixel, Rgba};
+use image::io::Reader as ImageReader;
 use rand::Rng;
 
 pub enum ModResult {
@@ -139,11 +140,60 @@ pub fn colorize(img : DynamicImage, args : Vec<String>) -> ModResult {
     ModResult::Ok(new_img)
 }
 
+pub fn pallettize(img : DynamicImage, args : Vec<String>) -> ModResult {
+    if args.len() != 1 {
+        return ModResult::ArgError("Requires one file to use as a pallette.".to_string())
+    }
+    let pal_img = match open_image(args[0].clone()) {
+        Ok(n) => n,
+        Err(s) => return ModResult::Error(format!("Error with pallette file: {}",s))
+    };
 
-// a helper function for getting the numbers out of a hex format color
+    // Grab every unique color
+    let mut pal : Vec<(u8,u8,u8,u8)> = Vec::new();
+    for pixel in pal_img.pixels() {
+        let col = pixel.2.to_rgba().channels4();
+        if !pal.contains(&col) {
+            pal.push(col);
+        }
+    }
+
+    // Replace each image color with the closest pallette color
+    let mut new_img = img.clone();
+    for pixel in img.pixels() {
+        let (r, g, b, a) : (u8,u8,u8,u8) = pixel.2.to_rgba().channels4();
+        let mut closest : ((u8,u8,u8,u8), f32) = ((0,0,0,0), f32::MAX);
+        for col in &pal {
+            let dist = (((r as i32-col.0 as i32).pow(2) + (g as i32-col.1 as i32).pow(2) + (b as i32-col.2 as i32).pow(2)) as f32).sqrt();
+            if dist < closest.1 {
+                closest = (col.clone(), dist);
+            }
+        }
+        new_img.put_pixel(pixel.0, pixel.1, Rgba([closest.0.0, closest.0.1, closest.0.2, a]));
+    }
+
+    ModResult::Ok(new_img)
+}
+
+
+// HELPER FUNCTIONS
+
+// getting the numbers out of a hex format color
 fn decode_hex(hex : String) -> Result<(f32,f32,f32), &'static str> {
     let r : f32 = u16::from_str_radix(hex.get(0..2).ok_or("Missing Digits")?, 16).or(Err("Not a Hexadecimal Number"))? as f32;
     let g : f32 = u16::from_str_radix(hex.get(2..4).ok_or("Missing Digits")?, 16).or(Err("Not a Hexadecimal Number"))? as f32;
     let b : f32 = u16::from_str_radix(hex.get(4..6).ok_or("Missing Digits")?, 16).or(Err("Not a Hexadecimal Number"))? as f32;
     return Ok((r,g,b))
+}
+
+// opening an image
+// CHANGE TO RETURN RESULT/OPTION/SOMETHING
+fn open_image(name : String) -> Result<DynamicImage, &'static str> {
+    match match ImageReader::open(name) {
+        Ok(n) => n,
+        Err(_) => return Err("Failed to open file.")
+    }.decode() {
+        Ok(n) => Ok(n),
+        Err(_) => return Err("Failed to read file.")
+    }
 }

@@ -13,6 +13,7 @@ The number of arguments varies depending on the command.
 - **huerotate \<degrees>** : Rotates the hue of the image by the given number of degrees.
 - **rgbreplace \<r> \<g> \<b>** : Takes in three hex-format colors for R, G, and B, and then replaces the RGB in the image with those three colors. You can think of it like developing a picture with different colors than red, green, and blue.
 - **colorize \<color>** : Takes in one hex-format color, then colors the whole image using that hue, matching the luminance as closely as possible.
+- **pallettize \<pallette image>** : Takes in a second image, from which it will pull out every color as a pallette. It will then apply this pallete to the original image, trying to match the original colors as closely as possible. Doing this with large pallettes will surely take unreasonable amounts of time.
 - **mosaic \<pieces>** : Generates a mosaic effect on the image, breaking it up into the given number of single-color cells. The cells are randomly positioned, so they should usually be placed pretty uniformly. The random distribution also means that if you get a result you do not like, you can call this again with the same number of pieces and get a different resulting image.
 
 There are 2 test commands that don't do anything particularly useful to an end user.
